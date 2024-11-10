@@ -25,7 +25,7 @@ export default {
             headers: { 'Content-Type': 'application/json', 'Client-Token': env.Z_API_TOKEN }, 
             body: JSON.stringify({ 
               phone: json.phone, 
-              text: whisperResponse.text 
+              message: whisperResponse.text 
             })
           });
           console.log('zapiResponse:', zapiResponse.statusText, await zapiResponse.text());
