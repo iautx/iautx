@@ -32,26 +32,26 @@ async function transcribeImage(env, imageUrl) {
 }
 
 async function inferChat(env, text, phone, role = 'user') {
-  // const messages = [
-  //   { role: "system", content: "You are a friendly assistant" },
-  //   //{ role: 'system', content: 'Você é um terapeuta especializado em acompanhar pacientes crianças e seus pais. Os dados do paciente estão estruturados em formato JSON a seguir: ```{}```' },
-  //   { role: role, content: `Usuario com telefone ${phone} diz ${text}` }
-  // ];
-  // console.log('messages:', messages);
+  const messages = [
+    { 
+      role: 'system', 
+      content: 
+      `Você é um terapeuta especializado em acompanhar pacientes crianças e seus pais. 
+      Os dados do paciente estão estruturados em formato JSON a seguir: \`\`\`{}\`\`\`` 
+    },
+    { 
+      role: role, 
+      content: 
+      `Usuário com telefone ${phone}: ${text}` 
+    }
+  ];
+  console.log('messages:', messages);
 
-  // const modelResponse = await env.AI.run(CHAT_MODEL, { 
-  //   messages
-  //   //functions: [],
-  //   //tools: []
-  // });
-
-  let chat = {
-    messages: [
-      { role: 'system', content: 'You are a helpful assistant.' },
-      { role: 'user', content: 'Who won the world series in 2020?' }
-    ]
-  };
-  const modelResponse = await env.AI.run('@cf/meta/llama-3-8b-instruct', chat);
+  const modelResponse = await env.AI.run(CHAT_MODEL, { 
+    messages
+    //functions: [],
+    //tools: []
+  });
   
   console.log('modelResponse:', modelResponse);
 
