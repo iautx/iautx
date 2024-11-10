@@ -20,7 +20,7 @@ export default {
           const whisperResponse = await env.AI.run('@cf/openai/whisper', inputs);
           console.log('whisperResponse:', whisperResponse);
 
-          const zapiResponse = await fetch(`${env.Z_API_URL}/send_text`, { body: { phone: json.phone, text: whisperResponse.text } });
+          const zapiResponse = await fetch(`${env.Z_API_URL}/send_text`, { method: 'POST', body: { phone: json.phone, text: whisperResponse.text } });
           console.log('zapiResponse:', zapiResponse.statusText, await zapiResponse.text());
         }
      }
