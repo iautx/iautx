@@ -22,7 +22,7 @@ export default {
 
           const zapiResponse = await fetch(`${env.Z_API_URL}/send-text`, { 
             method: 'POST', 
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${env.Z_API_TOKEN}` }, 
+            headers: { 'Content-Type': 'application/json', 'Client-Token': env.Z_API_TOKEN }, 
             body: JSON.stringify({ 
               phone: json.phone, 
               text: whisperResponse.text 
