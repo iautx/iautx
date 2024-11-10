@@ -13,7 +13,9 @@ export default {
           const blob = await audioResponse.arrayBuffer();
       
           const inputs = {
-            audio: [...new Uint8Array(blob)]
+            audio: [...new Uint8Array(blob)],
+            source_lang: 'pt',
+            target_lang: 'pt'
           };
           const whisperResponse = await env.AI.run('@cf/openai/whisper', inputs);
           console.log('whisperResponse:', whisperResponse);
