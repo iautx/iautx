@@ -18,7 +18,7 @@ Phil.ia leverages advanced AI models to facilitate communication and interaction
 
 Click the thumbnail below to watch the introduction video for Phil.ia:
 
-[![Watch the video](https://cdn.loom.com/sessions/thumbnails/415979bc5808413ba4a676fc65749a75-d767d5a7290a8710.jpg)]([philia.mp4](https://www.loom.com/share/415979bc5808413ba4a676fc65749a75))
+<a href="https://www.loom.com/share/415979bc5808413ba4a676fc65749a75"><img src="https://cdn.loom.com/sessions/thumbnails/415979bc5808413ba4a676fc65749a75-d767d5a7290a8710.jpg" border="0"/></a>
 
 ## Getting Started
 
