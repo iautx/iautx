@@ -1,11 +1,12 @@
+import html from 'index.html';
 
-const CHAT_MODEL           = '@cf/meta/llama-3.2-3b-instruct';
+const CHAT_MODEL           = '@cf/meta/llama-3.2-11b-vision-instruct'; //'@cf/meta/llama-3.2-3b-instruct';
 const IMAGE_TO_TEXT_MODEL  = '@cf/meta/llama-3.2-11b-vision-instruct';
 const SPEECH_TO_TEXT_MODEL = '@cf/openai/whisper';
 const TEXT_TO_IMAGE_MODEL  = '@cf/black-forest-labs/flux-1-schnell';
 const TEXT_TO_TEXT_MODEL   = '@cf/meta/m2m100-1.2b';
 
-//TODO: Update webhook on GET
+//TODO: Scheduled trigger
 
 async function transcribeAudio(env, audioUrl) {
   const audioResponse = await fetch(audioUrl);
@@ -66,6 +67,9 @@ async function inferChat(env, text, phone, role = 'user') {
     return `data:image/png;base64,${image}`;
   }
 
+  const records = await env.KV_NAMESPACE.get('records', 'json');
+  const record = records.find(r => r.user.phone === phone || r.parent.phone === phone) || {};
+
   const messages = [
     { 
       role: 'system', 
@@ -74,7 +78,7 @@ async function inferChat(env, text, phone, role = 'user') {
       Os dados do paciente estão estruturados em formato JSON a seguir: 
 
       \`\`\`
-      {}
+      ${JSON.stringify(record, null, 2)}
       \`\`\`
 
       O usuário pode ser o paciente ou o responsável, dependendo do número de telefone cadastrado.
@@ -82,7 +86,6 @@ async function inferChat(env, text, phone, role = 'user') {
       Caso o usuário entre em contato, coletar relato e informações sobre o paciente para registrar no sistema.
       `
     },
-    //TODO: JSON from KV
     //TODO: Recent messages from KV
     { 
       role: role, 
@@ -90,7 +93,7 @@ async function inferChat(env, text, phone, role = 'user') {
       `Usuário com telefone ${phone}: ${text}` 
     }
   ];
-  console.log('messages:', messages);
+  console.log('messages:', JSON.stringify(messages, null, 2));
 
   const modelResponse = await env.AI.run(CHAT_MODEL, { 
     messages
@@ -107,23 +110,34 @@ async function sendWhatsAppMessage(env, phone, text) {
   console.log('sendWhatsAppMessage:', phone, text.substring(0, Math.min(100, text.length)));
 
   let endpoint = 'send-text';
-  let body = JSON.stringify({ 
+  let body = { 
     phone: phone, 
     message: text 
-  });
+  };
 
   if (text.startsWith('data:image')) {
     endpoint = 'send-image';
-    body = JSON.stringify({ 
+    body = { 
       phone: phone, 
       image: text 
-    });
+    };
   }
 
+  return await sendZAPIRequest(env, endpoint, body);
+}
+
+async function updateZAPIWebhook(env, type, value) {
+  return await sendZAPIRequest(env, `update-webhook-${type}`, { value }, 'PUT');
+}
+
+async function sendZAPIRequest(env, endpoint, body, method = 'POST') {
   const zapiResponse = await fetch(`${env.Z_API_URL}/${endpoint}`, { 
-    method: 'POST', 
-    headers: { 'Content-Type': 'application/json', 'Client-Token': env.Z_API_TOKEN }, 
-    body: body
+    method: method, 
+    headers: { 
+      'Content-Type': 'application/json', 
+      'Client-Token': env.Z_API_TOKEN 
+    }, 
+    body: JSON.stringify(body)
   });
 
   console.log('zapiResponse:', zapiResponse.statusText, await zapiResponse.text());
@@ -135,10 +149,40 @@ export default {
   async fetch(request, env) {
    console.log('request:', request.method, request.url);
 
+   const url = new URL(request.url);
+
    let phone = null;
 
    try {
-    if (request.method == 'POST') {
+    if (request.method == 'GET' && url.pathname == '/') {
+      const updated = await updateZAPIWebhook(env, 'received', `${request.url}/webhook`);
+
+      return new Response(html, { headers: { 'Content-Type': 'text/html' } });
+      //return Response.json({ message: 'Webhook updated', success: updated });
+
+    } if (request.method == 'GET' && url.pathname == '/records') {
+        const records = await env.KV_NAMESPACE.get('records', 'json');
+  
+        return Response.json({ records: records || [], success: true });
+
+    } if (request.method == 'POST' && url.pathname.includes('/trigger')) {
+      const paths = url.pathname.split('/');
+      const phone = paths.pop();
+      const type = paths.pop();
+
+      const prompts = {
+        initial: 'Se apresente e informe o motivo do contato tanto para o pai quanto para o filho de acordo com o número de telefone identificado contra o cadastro.',
+        daily: 'Pergunte como foi o dia do paciente e se houve alguma mudança no comportamento ou sintomas.',
+        weekly: 'Faça um resumo da semana e envie para o pai uma cópia textual do relatório semanal.',
+      };
+
+      const text = await inferChat(env, prompts[type], phone, 'user');
+ 
+      const sent = await sendWhatsAppMessage(env, phone, text);
+
+      return Response.json({ message: text, success: sent });
+
+    } else if (request.method == 'POST' && url.pathname == '/webhook') {
       const json = await request.json();
    
       console.log('json:', json);

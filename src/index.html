@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <title>IAutismo</title>
+    <style>
+        .emoji-calendar {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        .emoji-calendar td {
+            text-align: center;
+            padding: 1px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h2 class="mb-4">Registros</h2>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nome</th>
+                    <th>Pai</th>
+                    <th>Semanário</th>
+                </tr>
+            </thead>
+            <tbody id="recordTableBody">
+                <!-- Records will be populated here -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        async function fetchRecords() {
+            try {
+                const response = await fetch('/records');
+                const records = (await response.json()).records;
+                populateTable(records);
+            } catch (error) {
+                console.error('Error fetching records:', error);
+            }
+        }
+
+        function populateTable(records) {
+            console.log('Populating table with records:', records);
+            const tableBody = document.getElementById('recordTableBody');
+            tableBody.innerHTML = '';
+
+            records.forEach((record, i) => {
+                const row = document.createElement('tr');
+
+                const idCell = document.createElement('td');
+                idCell.textContent = record.id || i;
+                row.appendChild(idCell);
+
+                const nameCell = document.createElement('td');
+                nameCell.innerHTML = `
+                    ${record.user.name}<br>
+                    <button class="btn btn-primary btn-sm" onclick="triggerWorkflow('initial', ${record.user.phone})">Inicial</button>
+                    <button class="btn btn-secondary btn-sm" onclick="triggerWorkflow('daily', ${record.user.phone})">Diário</button>
+                    <button class="btn btn-success btn-sm" onclick="triggerWorkflow('weekly', ${record.user.phone})">Semanal</button>
+                `;
+                row.appendChild(nameCell);
+
+                const parentNameCell = document.createElement('td');
+                parentNameCell.innerHTML = `
+                    ${record.parent.name}<br>
+                    <button class="btn btn-primary btn-sm" onclick="triggerWorkflow('initial', ${record.parent.phone})">Inicial</button>
+                    <button class="btn btn-secondary btn-sm" onclick="triggerWorkflow('daily', ${record.parent.phone})">Diário</button>
+                    <button class="btn btn-success btn-sm" onclick="triggerWorkflow('weekly', ${record.parent.phone})">Semanal</button>
+                `;
+                row.appendChild(parentNameCell);
+
+                const calendarCell = document.createElement('td');
+                calendarCell.innerHTML = generateEmojiCalendar(record.weeklyStatus || [ 'bad', 'bad', 'average', 'average', 'good', 'good', 'good' ]);
+                row.appendChild(calendarCell);
+
+                tableBody.appendChild(row);
+            });
+        }
+
+        function generateEmojiCalendar(weeklyStatus) {
+            const days = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'];
+            return `
+                <table class="emoji-calendar">
+                    <tr>
+                        ${days.map((day, index) => `<td>${day}</td>`).join('')}
+                    </tr>
+                    <tr>
+                        ${weeklyStatus.map(status => `<td>${getEmojiForStatus(status)}</td>`).join('')}
+                    </tr>
+                </table>
+            `;
+        }
+
+        function getEmojiForStatus(status) {
+            switch (status) {
+                case 'good':
+                    return '😊';
+                case 'average':
+                    return '😐';
+                case 'bad':
+                    return '😞';
+                default:
+                    return '';
+            }
+        }
+
+        function triggerWorkflow(type, phone) {
+            fetch(`/trigger/${type}/${phone}`, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Workflow triggered:', data);
+                    fetchRecords();
+                })
+                .catch(error => console.error('Error triggering workflow:', error));
+        }
+
+        // Fetch records on page load
+        fetchRecords();
+    </script>
+</body>
+</html>
