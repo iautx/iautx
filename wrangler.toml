@@ -4,7 +4,7 @@ compatibility_date = "2024-11-10"
 workers_dev = true
 
 kv_namespaces = [
-    { binding = "KV_NAMESPACE", id = "cb167e1000174470bc2fec482d70c682", preview_id = "cb167e1000174470bc2fec482d70c682" }
+    { binding = "KV", id = "cb167e1000174470bc2fec482d70c682", preview_id = "cb167e1000174470bc2fec482d70c682" }
 ]
 
 [ai]

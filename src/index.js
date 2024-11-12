@@ -1,4 +1,4 @@
-import html from 'index.html';
+import html from './index.html';
 
 const CHAT_MODEL           = '@cf/meta/llama-3.2-11b-vision-instruct'; //'@cf/meta/llama-3.2-3b-instruct';
 const IMAGE_TO_TEXT_MODEL  = '@cf/meta/llama-3.2-11b-vision-instruct';
@@ -67,7 +67,7 @@ async function inferChat(env, text, phone, role = 'user') {
     return `data:image/png;base64,${image}`;
   }
 
-  const records = await env.KV_NAMESPACE.get('records', 'json');
+  const records = await env.KV.get('records', 'json');
   const record = records.find(r => r.user.phone === phone || r.parent.phone === phone) || {};
 
   const messages = [
@@ -147,15 +147,19 @@ async function sendZAPIRequest(env, endpoint, body, method = 'POST') {
 
 export default {
   async fetch(request, env) {
-   console.log('request:', request.method, request.url);
+   const url = new URL(request.headers.get('mf-original-url') || request.url);
 
-   const url = new URL(request.url);
+   console.log('request:', request.method, url.href); //, JSON.stringify(Object.fromEntries(request.headers), null, 2));
 
    let phone = null;
 
    try {
     if (request.method == 'GET' && url.pathname == '/') {
-      const updated = await updateZAPIWebhook(env, 'received', `${request.url}/webhook`);
+      url.pathname = '/webhook';
+
+      const updated = await updateZAPIWebhook(env, 'received', url.href);
+
+      console.log('updated:', updated, 'webhook endpoint:', url.href);
 
       return new Response(html, { headers: { 'Content-Type': 'text/html' } });
       //return Response.json({ message: 'Webhook updated', success: updated });
@@ -185,7 +189,7 @@ export default {
     } else if (request.method == 'POST' && url.pathname == '/webhook') {
       const json = await request.json();
    
-      console.log('json:', json);
+      console.log('json:', JSON.stringify(json, null, 2));
 
       phone = json.phone;
  
