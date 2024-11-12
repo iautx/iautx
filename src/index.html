@@ -14,6 +14,15 @@
             text-align: center;
             padding: 1px;
         }
+        .status-good {
+            background-color: #d4edda;
+        }
+        .status-average {
+            background-color: #fff3cd;
+        }
+        .status-bad {
+            background-color: #f8d7da;
+        }
     </style>
 </head>
 <body>
@@ -91,7 +100,7 @@
                         ${days.map((day, index) => `<td>${day}</td>`).join('')}
                     </tr>
                     <tr>
-                        ${weeklyStatus.map(status => `<td>${getEmojiForStatus(status)}</td>`).join('')}
+                        ${weeklyStatus.map(status => `<td class='status-${status}'>${getEmojiForStatus(status)}</td>`).join('')}
                     </tr>
                 </table>
             `;

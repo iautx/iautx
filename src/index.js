@@ -18,7 +18,7 @@ async function transcribeAudio(env, audioUrl) {
     target_lang: 'pt'
   });
 
-  console.log('modelResponse:', modelResponse);
+  console.debug('modelResponse:', modelResponse);
   return modelResponse.text;
 }
 
@@ -29,7 +29,7 @@ async function translateText(env, text) {
     target_lang: 'pt'
   });
 
-  console.log('modelResponse:', modelResponse);
+  console.debug('modelResponse:', modelResponse);
   return modelResponse.translated_text;
 }
 
@@ -46,7 +46,7 @@ async function transcribeImage(env, imageUrl) {
     image: [...new Uint8Array(blob)]
   });
 
-  console.log('modelResponse:', modelResponse);
+  console.debug('modelResponse:', modelResponse);
   return await translateText(env, modelResponse.response);
 }
 
@@ -56,7 +56,7 @@ async function generateImage(env, text) {
     prompt: text
   });
 
-  console.log('modelResponse:', modelResponse);
+  console.debug('modelResponse:', modelResponse);
   return modelResponse.image;
 }
 
@@ -93,7 +93,7 @@ async function inferChat(env, text, phone, role = 'user') {
       `Usuário com telefone ${phone}: ${text}` 
     }
   ];
-  console.log('messages:', JSON.stringify(messages, null, 2));
+  console.debug('messages:', JSON.stringify(messages, null, 2));
 
   const modelResponse = await env.AI.run(CHAT_MODEL, { 
     messages
@@ -101,13 +101,13 @@ async function inferChat(env, text, phone, role = 'user') {
     //tools: []
   });
   
-  console.log('modelResponse:', modelResponse);
+  console.debug('modelResponse:', modelResponse);
 
   return modelResponse.response;
 }
 
 async function sendWhatsAppMessage(env, phone, text) {
-  console.log('sendWhatsAppMessage:', phone, text.substring(0, Math.min(100, text.length)));
+  console.debug('sendWhatsAppMessage:', phone, text.substring(0, Math.min(100, text.length)));
 
   let endpoint = 'send-text';
   let body = { 
@@ -140,16 +140,16 @@ async function sendZAPIRequest(env, endpoint, body, method = 'POST') {
     body: JSON.stringify(body)
   });
 
-  console.log('zapiResponse:', zapiResponse.statusText, await zapiResponse.text());
+  console.debug('[zapi:response]', zapiResponse.statusText, await zapiResponse.text());
 
   return zapiResponse.status >= 200 && zapiResponse.status < 300;
 }
 
 export default {
   async fetch(request, env) {
-   const url = new URL(request.headers.get('mf-original-url') || request.url);
+   const url = new URL((request.headers ? request.headers.get('mf-original-url') : null) || request.url);
 
-   console.log('request:', request.method, url.href); //, JSON.stringify(Object.fromEntries(request.headers), null, 2));
+   console.debug('[request:start]', request.method, url.href); //, JSON.stringify(Object.fromEntries(request.headers), null, 2));
 
    let phone = null;
 
@@ -159,13 +159,13 @@ export default {
 
       const updated = await updateZAPIWebhook(env, 'received', url.href);
 
-      console.log('updated:', updated, 'webhook endpoint:', url.href);
+      console.debug('[zapi:webhook:updated]', updated, 'webhook endpoint:', url.href);
 
       return new Response(html, { headers: { 'Content-Type': 'text/html' } });
       //return Response.json({ message: 'Webhook updated', success: updated });
 
     } if (request.method == 'GET' && url.pathname == '/records') {
-        const records = await env.KV_NAMESPACE.get('records', 'json');
+        const records = await env.KV.get('records', 'json');
   
         return Response.json({ records: records || [], success: true });
 
@@ -189,7 +189,7 @@ export default {
     } else if (request.method == 'POST' && url.pathname == '/webhook') {
       const json = await request.json();
    
-      console.log('json:', JSON.stringify(json, null, 2));
+      console.debug('[request:json]', JSON.stringify(json, null, 2));
 
       phone = json.phone;
  
@@ -218,9 +218,9 @@ export default {
    } catch (error) {
     console.error('error:', error);
 
-    await sendWhatsAppMessage(env, phone, `*Erro:* \`${error.message}\``);
+    if (phone) await sendWhatsAppMessage(env, phone, `*Erro:* \`${error.message}\``);
 
-    return Response.json(error, { status: 500 });
+    return Response.json({ message: error.message, stack: error.stack }, { status: 500 });
    }
   }
 };
